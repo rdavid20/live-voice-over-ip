@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 
 /* CLIENT RELATED */
-int create_connected_socket(const char* ip_addr, int port) {
+int create_connected_socket(const char* ip_addr) {
   int client_fd;
   struct sockaddr_in serv_addr;
 
@@ -37,7 +37,7 @@ int create_connected_socket(const char* ip_addr, int port) {
 }
 
 /* SERVER RELATED */
-int create_server_socket(int port) {
+int create_server_socket() {
   int server_fd;
   struct sockaddr_in addr;
 
