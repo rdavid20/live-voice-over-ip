@@ -4,13 +4,16 @@
 #include <unistd.h>
 
 #include "utils/socket_utils.h"
+#include "utils/sdp.h"
+#include "utils/protocol.h"
 
+#define IP "127.0.0.1"
 
 int main()
 {
   char buffer[BUFFER_SIZE];
 
-  int sock = create_connected_socket("127.0.0.1");
+  int sock = create_connected_socket(IP);
   if (sock < 0) {
     return 1;
   }
@@ -37,13 +40,15 @@ int main()
   server_udp_addr.sin_port = htons(udp_port);
   inet_pton(AF_INET, "127.0.0.1", &server_udp_addr.sin_addr);
 
-  const char* payload = "hello on udp";
-  ssize_t sent = sendto(udp_fd, payload, strlen(payload), 0,
-    (struct sockaddr *)&server_udp_addr, sizeof(server_udp_addr));
+  char *sdp = generate_sdp_text(IP, udp_port, 96, "L16", 48000, 2);
+  message_type_t type = MSG_SDP;
+  char msg[MAX_TCP_MSG_SIZE];
+  snprintf(msg, sizeof(msg), "%s%s", message_type_str[type], sdp);
+  send(sock, msg, strlen(msg), 0);
 
-  if (sent < 0) {
-    perror("sendto");
-  }
+  sleep(2);
+  char msg2[] = "FOO some random payload";
+  send(sock, msg2, strlen(msg2), 0);
 
   close(sock);
   return 0;

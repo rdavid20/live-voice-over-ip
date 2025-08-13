@@ -9,6 +9,8 @@
 #include <pthread.h>
 
 #include "utils/socket_utils.h"
+#include "utils/sdp.h"
+#include "utils/protocol.h"
 
 void *client_thread(void *arg) {
   client_context_t *ctx = (client_context_t *)arg;
@@ -28,11 +30,35 @@ void *client_thread(void *arg) {
   snprintf(msg, sizeof(msg), "UDP_PORT %u\n", udp_port);
   send(ctx->tcp_fd, msg, strlen(msg), 0);
 
+  /* Init sdp info */
+  sdp_info_t sdp_info = {0};
+
   while (1) {
     ssize_t n = recv(ctx->tcp_fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
     if (n > 0) {
       buffer[n] = '\0';
-      printf("TCP message: %s\n", buffer);
+
+      /* Extract message type */
+      message_type_t type = MSG_UNKOWN;
+      for (int i = 0; i < MSG_COUNT; i++) {
+        if (strncmp(buffer, message_type_str[i], 4) == 0)  {
+          type = i;
+          break;
+        }
+      }
+
+      switch (type) {
+        case MSG_SDP:
+          printf("Got SDP message\n");
+          char *sdp_text = buffer + 4;
+          parse_incoming_sdp(sdp_text, &sdp_info);
+          print_sdp_info(&sdp_info);
+          break;
+
+        default:
+          printf("Got Unknown message type\n");
+          break;
+      }
     }
 
     struct sockaddr_in src_addr;
@@ -40,12 +66,7 @@ void *client_thread(void *arg) {
     ssize_t m = recvfrom(ctx->udp_fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT,
                          (struct sockaddr *)&src_addr, &src_len);
     if (m > 0) {
-        buffer[m] = '\0';
-        printf("Received on UDP port %u from %s:%d: %s\n",
-               udp_port,
-               inet_ntoa(src_addr.sin_addr),
-               ntohs(src_addr.sin_port),
-               buffer);
+
     }
 
     /* Sleep a bit to free up CPU time for other things */
